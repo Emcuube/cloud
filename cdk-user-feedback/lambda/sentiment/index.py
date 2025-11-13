@@ -6,22 +6,18 @@ import requests
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Dict, Any
-
+from requests.auth import HTTPBasicAuth
 comprehend = boto3.client('comprehend')
 dynamodb = boto3.resource('dynamodb')
 
 def index_to_elasticsearch(data: Dict[str, Any]) -> None:
-    """Index document to Elasticsearch"""
+    """Index document to OpenSearch using Basic Auth"""
     es_endpoint = os.environ['ES_ENDPOINT']
-    es_api_key = os.environ['ES_API_KEY']
+    es_user = os.environ['ES_USERNAME']
+    es_pass = os.environ['ES_PASSWORD']
     es_index = os.environ['ES_INDEX']
     
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"ApiKey {es_api_key}"
-    }
-    
-    # Convert Decimal objects to float for ES
+    # Convert Decimal objects to float for OpenSearch
     def decimal_to_float(obj):
         if isinstance(obj, Decimal):
             return float(obj)
@@ -30,20 +26,20 @@ def index_to_elasticsearch(data: Dict[str, Any]) -> None:
         elif isinstance(obj, list):
             return [decimal_to_float(x) for x in obj]
         return obj
-    
+
     es_data = decimal_to_float(data)
-    
     document_id = es_data['reviewId']
     url = f"{es_endpoint}/{es_index}/_doc/{document_id}"
-    
+
     try:
         response = requests.put(
             url,
-            headers=headers,
+            auth=(es_user, es_pass),  # ✅ Basic Auth here
+            headers={"Content-Type": "application/json"},
             json=es_data,
-            verify=True,
             timeout=30
         )
+
         
         if not response.ok:
             print(f"ES indexing failed for document {document_id}: {response.text}")
@@ -110,7 +106,7 @@ def process_feedback(review_data: Dict[str, Any]) -> Dict[str, Any]:
         # Convert numeric timestamp to string if it exists
         timestamp = review_data.get('timestamp')
         if timestamp is not None:
-            timestamp = str(timestamp)
+            timestamp = str(review_data.get('timestamp') or int(datetime.now().timestamp() * 1000))
 
         # Build enriched review data
         processed_data = {
