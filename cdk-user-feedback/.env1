@@ -1,8 +1,0 @@
-ES_ENDPOINT=https://harmonious-pine-1j60ns15.us-east-1.bonsaisearch.net
-ES_USERNAME=f6d27106c8
-ES_PASSWORD=d0f68b55d77c9ef8eb8e
-ES_INDEX=reviews
-
-COGNITO_DOMAIN_PREFIX="user-feedback-dev"
-COGNITO_CALLBACK_URLS="http://localhost:5173/callback"
-COGNITO_LOGOUT_URLS="http://localhost:5173/logout"

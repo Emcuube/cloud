@@ -1,13 +1,21 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
-import ReviewSimulator from './components/ReviewSimulator';
 import CallbackPage from './components/auth/CallbackPage';
 import RequireAuth from './components/auth/RequireAuth';
 import Sidebar from './components/ui/sidebar';
-
-// New dashboard page
+import ReviewSimulator from './components/ReviewSimulator';
 import DashboardPage from './pages/DashboardPage';
+import ReviewsPage from './pages/ReviewsPage';
+
+const AuthenticatedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <RequireAuth>
+    <div className="min-h-screen bg-gray-100">
+      <Sidebar />
+      <main className="min-h-screen p-6 lg:ml-64">{children}</main>
+    </div>
+  </RequireAuth>
+);
 
 const App: React.FC = () => {
   return (
@@ -17,32 +25,30 @@ const App: React.FC = () => {
         {/* Cognito callback (no sidebar) */}
         <Route path="/callback" element={<CallbackPage />} />
 
-        {/* Authenticated layout with sidebar */}
         <Route
           path="/dashboard"
           element={
-            <RequireAuth>
-              <div className="min-h-screen bg-gray-100 flex">
-                <Sidebar />
-                <main className="flex-1 p-6">
-                  <DashboardPage />
-                </main>
-              </div>
-            </RequireAuth>
+            <AuthenticatedLayout>
+              <DashboardPage />
+            </AuthenticatedLayout>
           }
         />
 
         <Route
           path="/"
           element={
-            <RequireAuth>
-              <div className="min-h-screen bg-gray-100 flex">
-                <Sidebar />
-                <main className="flex-1 p-6">
-                  <ReviewSimulator />
-                </main>
-              </div>
-            </RequireAuth>
+            <AuthenticatedLayout>
+              <ReviewSimulator />
+            </AuthenticatedLayout>
+          }
+        />
+
+        <Route
+          path="/reviews"
+          element={
+            <AuthenticatedLayout>
+              <ReviewsPage />
+            </AuthenticatedLayout>
           }
         />
 
