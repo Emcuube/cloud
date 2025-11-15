@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { esSearch } from "../../api/esClient";
 
 const POLL_INTERVAL_MS = 15000;
+const MAX_VISIBLE_ROWS = 10;
+const ROW_HEIGHT_PX = 56;
 
 export default function ReviewTable() {
   const [rows, setRows] = useState<any[]>([]);
@@ -19,7 +21,7 @@ export default function ReviewTable() {
 
         const docs = res?.hits?.hits?.map((hit: any) => hit._source) || [];
         if (!mounted) return;
-        setRows(docs.slice(0, 20));
+        setRows(docs);
       } catch (err) {
         // ignore and keep previous rows
       }
@@ -43,26 +45,31 @@ export default function ReviewTable() {
   return (
     <div className="bg-white p-6 rounded-xl shadow">
       <h2 className="text-xl font-semibold mb-4">Latest Reviews</h2>
-      <table className="w-full table-auto text-left">
-        <thead>
-          <tr className="border-b">
-            <th className="p-2">Rating</th>
-            <th className="p-2">Review</th>
-            <th className="p-2">Department</th>
-            <th className="p-2">Sentiment</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r: any, idx) => (
-            <tr key={idx} className="border-b">
-              <td className="p-2">{r.rating}</td>
-              <td className="p-2">{(r.review || '').substring(0, 60)}...</td>
-              <td className="p-2">{r.department}</td>
-              <td className="p-2">{r.sentiment}</td>
+      <div
+        className="overflow-y-auto"
+        style={{ maxHeight: `${MAX_VISIBLE_ROWS * ROW_HEIGHT_PX}px` }}
+      >
+        <table className="w-full table-auto text-left">
+          <thead className="sticky top-0 bg-white">
+            <tr className="border-b">
+              <th className="p-2">Rating</th>
+              <th className="p-2">Review</th>
+              <th className="p-2">Department</th>
+              <th className="p-2">Sentiment</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((r: any, idx) => (
+              <tr key={idx} className="border-b">
+                <td className="p-2">{r.rating}</td>
+                <td className="p-2">{(r.review || '').substring(0, 60)}...</td>
+                <td className="p-2">{r.department}</td>
+                <td className="p-2">{r.sentiment}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
