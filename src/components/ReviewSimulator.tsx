@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Badge } from '../components/ui/badge';
 import { Star, Pause, Play, Settings, RefreshCcw } from 'lucide-react';
 import { Slider } from '../components/ui/slider';
+// redirectToLogout moved to sidebar; not needed here
 
 interface Review {
   reviewId: string;
@@ -27,6 +28,9 @@ interface Stats {
 }
 
 const ReviewSimulator: React.FC = () => {
+  const [, setReviews] = useState<Review[]>([]);
+  const [, setMeta] = useState<any>({});
+
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
   const [currentReview, setCurrentReview] = useState<Review | null>(null);
   const [recentReviews, setRecentReviews] = useState<Review[]>([]);
@@ -76,15 +80,15 @@ const ReviewSimulator: React.FC = () => {
       if (!response.ok) throw new Error('Failed to fetch reviews');
       
       const data = await response.json();
-      // Extract the reviews array from the response
-      const reviews = data.reviews;
-      
-      if (!Array.isArray(reviews)) {
-        console.error('Expected array of reviews but got:', reviews);
+      setReviews(data.reviews || []);  // 👈 chỉ lấy mảng reviews
+      setMeta(data.metadata || {});
+
+      if (!Array.isArray(data.reviews)) {
+        console.error('Expected array of reviews but got:', data.reviews);
         return;
       }
 
-      setReviewCache(prevCache => [...prevCache, ...reviews]);
+      setReviewCache(prevCache => [...prevCache, ...data.reviews]);
     } catch (error) {
       console.error('Error fetching reviews:', error);
     } finally {
@@ -100,7 +104,7 @@ const ReviewSimulator: React.FC = () => {
 
   const sendToAPI = async (review: Review) => {
     try {
-      const response = await fetch(`${SENTIMENT_API_URL}/feedback`, {
+      const response = await fetch(`${SENTIMENT_API_URL}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -108,7 +112,7 @@ const ReviewSimulator: React.FC = () => {
         body: JSON.stringify({
           reviews: [{
             ...review,
-            reviewDateTime: review.reviewDateTime,
+            reviewDateTime: review.reviewDateTime || new Date().toISOString(),
             timestamp: review.timestamp.toString(),
             reviewId: review.reviewId,
             clothingId: review.clothingId,
@@ -128,6 +132,13 @@ const ReviewSimulator: React.FC = () => {
       if (!response.ok) {
         const errorData = await response.json();
         console.error('API call failed:', errorData);
+      } else {
+        // Notify the UI that a review has been processed/indexed so charts/tables can refresh immediately
+        try {
+          window.dispatchEvent(new CustomEvent('reviewIndexed', { detail: { reviewId: review.reviewId } }));
+        } catch (e) {
+          // ignore in non-browser test environments
+        }
       }
     } catch (error) {
       console.error('Error sending review:', error);
@@ -141,9 +152,12 @@ const ReviewSimulator: React.FC = () => {
       return null;
     }
 
-    const randomIndex = Math.floor(Math.random() * reviewCache.length);
-    const [selectedReview] = reviewCache.splice(randomIndex, 1);
-    setReviewCache([...reviewCache]);
+    // Copy the cache first to avoid mutating React state directly
+    const cacheCopy = [...reviewCache];
+    const randomIndex = Math.floor(Math.random() * cacheCopy.length);
+    const [selectedReview] = cacheCopy.splice(randomIndex, 1);
+    // Update state with the modified copy
+    setReviewCache(cacheCopy);
 
     return {
       ...selectedReview,
@@ -203,11 +217,13 @@ const ReviewSimulator: React.FC = () => {
 
   return (
     <div className="p-4 max-w-4xl mx-auto space-y-4">
+
       <Card className="bg-white shadow-lg">
         <CardHeader>
           <CardTitle className="flex justify-between items-center">
             <span>Live Customer Review Simulator</span>
             <div className="flex gap-2">
+              {/* Logout was moved to the sidebar */}
               <Button
                 variant="outline"
                 onClick={() => {
